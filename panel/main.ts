@@ -16,7 +16,6 @@ type Data = {
 };
 type Summary = { stats: Stats; totals: Record<string, number>; deltas: Record<string, number | null>; builtAt: number; error?: string | null };
 type LogEntry = { t: number; kind: string; name: string; session: string; title: string; directory: string; tokens: number };
-type Live = { tps: number; peak: number; lastTurn: number; model: string; title: string; idle: boolean; builtAt: number; summary: Summary };
 type Ctx = { input: number; output: number; reasoning: number; cacheRead: number; cacheWrite: number; used: number; avgInput: number; avgCacheRead: number; maxInput: number; cacheHitRate: number; requests: number; title: string; directory: string; time: number };
 
 const host = connectHost();
@@ -46,7 +45,6 @@ const settings = { bars: 14, heatWeeks: 26, showTrends: true, clock12: false, co
 let data: Data | null = null;
 let summary: Summary | null = null;
 let todayData: Data | null = null;
-let liveData: Live | null = null;
 let ctxData: Ctx | null = null;
 let logData: LogEntry[] = [];
 let currentSession = '';
@@ -124,7 +122,6 @@ async function load(force = false): Promise<void> {
       data = await json(`/data?range=${range}&project=${encodeURIComponent(project)}`);
       todayData = await json(`/data?range=today&project=${encodeURIComponent(project)}`);
       summary = await json('/summary');
-      liveData = await json(`/live${currentSession ? `?session=${encodeURIComponent(currentSession)}` : ''}`);
       ctxData = await json('/context');
       if (currentSession) sessionInfo = await json(`/session?session=${encodeURIComponent(currentSession)}`);
     }
@@ -335,18 +332,9 @@ const CACHE: Col = { key: 'cr', label: 'Cache', num: true, get: (r) => fmt(r.cr 
 const dateCols: Col[] = [NAME, { key: 'requests', label: 'Req', num: true }, { key: 'tools', label: 'Tools', num: true }, ERR, TOK];
 
 function todayCard(): HTMLElement {
-  return card('todayOverview', 'Today at a glance', liveData?.idle ? 'idle · live' : 'active · live', () => {
-    const l = liveData;
+  return card('todayOverview', 'Today at a glance', 'real data', () => {
     const s = summary?.stats ?? todayData?.stats ?? {};
-    const meter = el('div', 'live');
-    const main = el('div', 'live-main');
-    main.append(el('div', 'live-v', l ? String(l.tps) : '0'), el('div', 'live-u', 'tokens / sec'));
-    meter.append(main);
-    const liveFacts = factsGrid([
-      ['Peak / min', fmt(l?.peak ?? 0)], ['Last turn', fmt(l?.lastTurn ?? 0)],
-      ['Model', (l?.model || '—').split('/').pop() || '—'], ['Updated', clock(l?.builtAt ?? 0)],
-    ]);
-    const facts = factsGrid([
+    return factsGrid([
       ['Sessions', String(s.sessions ?? 0)], ['Requests', String(s.requests ?? 0)],
       ['Tools', String(s.tools ?? 0)], ['Skills', String(s.skills ?? 0)],
       ['MCP', String(s.mcp ?? 0)], ['Projects', String(s.projects ?? 0)],
@@ -354,27 +342,7 @@ function todayCard(): HTMLElement {
       ['Total', fmt(s.totalTokens ?? 0)], ['Errors', String(s.errors ?? 0)],
       ['Est. cost', `$${estCost(s).toFixed(4)}`],
     ]);
-    return [meter, liveFacts, facts];
   });
-}
-
-let lastLiveAt = 0;
-async function refreshLive(): Promise<void> {
-  if (surface !== 'panel' || tab !== 'overview' || loading || !data || document.visibilityState !== 'visible') return;
-  const every = liveData?.source === 'stream' ? 2000 : 5000;
-  if (Date.now() - lastLiveAt < every) return;
-  lastLiveAt = Date.now();
-  try {
-    const q = currentSession ? `&session=${encodeURIComponent(currentSession)}` : '';
-    const l: Live = await json(`/live?fresh=1${q}`);
-    liveData = l;
-    summary = l.summary ?? summary;
-    if (currentSession) sessionInfo = await json(`/session?session=${encodeURIComponent(currentSession)}`);
-    for (const old of [...root.querySelectorAll('[data-card]')]) old.remove();
-    const foot = root.querySelector('.foot');
-    for (const c of overviewCards()) root.insertBefore(c, foot);
-    if (foot) foot.textContent = `Live · ${clock(l.builtAt)} · local OpenCode data`;
-  } catch { /* keep the last good numbers */ }
 }
 
 function contextCard(source?: Ctx): HTMLElement {
@@ -584,7 +552,7 @@ function sessionOverview(): HTMLElement[] {
     return factsGrid([
       ['Tokens', fmt(s.totalTokens ?? 0)], ['Text', fmt(s.tokens ?? 0)], ['Cache', fmt(s.cache ?? 0)],
       ['Requests', String(s.requests ?? 0)], ['Tools', String(s.tools ?? 0)], ['Skills', String(s.skills ?? 0)],
-      ['Est. cost', `$${estCost(s).toFixed(4)}`], ['Model', (liveData?.model || '—').split('/').pop() || '—'],
+      ['Est. cost', `$${estCost(s).toFixed(4)}`], ['Context req', String(sessionInfo?.context?.requests ?? 0)],
     ]);
   }));
   out.push(tokenBreakdown(s, focusSession ? 'Session token breakdown' : 'Session token breakdown', 'tokens'));
@@ -598,7 +566,7 @@ function sessionOverview(): HTMLElement[] {
 }
 
 function overviewCards(): HTMLElement[] {
-  // Global Today / live section stays visible even when a session is open.
+  // Global Today section stays visible even when a session is open.
   const out: HTMLElement[] = [todayCard()];
   if (todayData) out.push(tokenBreakdown(todayData.stats, "Today's token breakdown"));
   out.push(historyCard(data!.totals));
@@ -789,5 +757,4 @@ host.onReady((context) => {
   if (ready) return;
   ready = true;
   void (async () => { await loadView(); await load(); if (surface === 'panel' && tab === 'logs') await loadLogs(); })();
-  setInterval(() => { void refreshLive(); }, 2000);
 });

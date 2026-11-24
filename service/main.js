@@ -16,62 +16,6 @@ let state = null;
 let memo = new Map();
 let lastCheck = 0;
 
-// Optional realtime feed from the host's OpenCode connection. The DB remains
-// the source of truth; this only makes the live meter responsive during a turn.
-const OC_URL = process.env.OPENCHAMBER_OPENCODE_URL;
-const LIVE_TYPES = new Set([
-  'session.text.started', 'session.text.delta', 'session.reasoning.started',
-  'session.reasoning.delta', 'session.tool.input.started', 'session.tool.input.delta',
-]);
-const stream = { state: OC_URL ? 'connecting' : 'unavailable', chars: [], lastAt: 0 };
-
-function streamChars(type, data, at) {
-  if (!LIVE_TYPES.has(type)) return;
-  const delta = type.endsWith('.delta');
-  const n = delta ? (typeof data.delta === 'string' ? data.delta.length : 0)
-    : (typeof data.text === 'string' ? data.text.length : 0);
-  if (!n) return;
-  const s = typeof data.sessionID === 'string' ? data.sessionID : '';
-  stream.lastAt = at;
-  stream.chars.push({ t: at, n, s });
-  const floor = at - 12_000;
-  while (stream.chars.length && stream.chars[0].t < floor) stream.chars.shift();
-}
-
-async function connectStream() {
-  if (!OC_URL || !token) return;
-  const url = new URL(`${OC_URL.replace(/\/$/, '')}/api/event`);
-  for (const t of LIVE_TYPES) url.searchParams.append('types', t);
-  try {
-    const res = await fetch(url.toString(), {
-      headers: { authorization: `Bearer ${token}`, accept: 'text/event-stream' },
-    });
-    if (!res.ok || !res.body) throw new Error(`event stream ${res.status}`);
-    stream.state = 'open';
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let i;
-      while ((i = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, i).trim();
-        buffer = buffer.slice(i + 1);
-        if (!line.startsWith('data:')) continue;
-        try {
-          const ev = JSON.parse(line.slice(5).trim());
-          if (ev?.type) streamChars(ev.type, ev.properties ?? ev.data ?? {}, Date.now());
-        } catch { /* ignore a partial event */ }
-      }
-    }
-  } catch { /* reconnect below */ }
-  stream.state = 'retrying';
-  setTimeout(() => { void connectStream(); }, 5000);
-}
-if (OC_URL) void connectStream();
-
 function findDb() {
   const home = os.homedir();
   const candidates = [];
@@ -116,9 +60,7 @@ SELECT rowid AS rid, session_id AS s, time_created AS t,
   COALESCE(json_extract(data, '$.tokens.cache.read'), 0) AS cr,
   COALESCE(json_extract(data, '$.tokens.cache.write'), 0) AS cw,
   COALESCE(json_extract(data, '$.cost'), 0) AS cost,
-  COALESCE(json_extract(data, '$.model.id'), '') AS model,
-  COALESCE(json_extract(data, '$.time.firstToken'), 0) AS ft,
-  COALESCE(json_extract(data, '$.time.streamed'), 0) AS st
+  COALESCE(json_extract(data, '$.model.id'), '') AS model
 FROM session_message
 WHERE type = 'assistant' AND rowid > ?
 ORDER BY rowid`;
@@ -248,7 +190,7 @@ function refresh(force = false) {
     const rows = new Map();
     for (const m of msgs) rows.set(m.rid, {
       s: m.s, t: m.t, i: m.i, o: m.o, r: m.r, cr: m.cr, cw: m.cw,
-      cost: m.cost, model: m.model, ft: m.ft, st: m.st, tools: [], skills: [], errTools: [],
+      cost: m.cost, model: m.model, tools: [], skills: [], errTools: [],
     });
     const add = (rid, s, t, key, value, dedupe = false) => {
       let row = rows.get(rid);
@@ -478,46 +420,6 @@ function logs({ limit = 200, kind = 'all', session = '', q = '', project = ALL }
 
 const rowTokens = (r) => (r.i || 0) + (r.o || 0) + (r.r || 0) + (r.cr || 0) + (r.cw || 0);
 
-function live(sessionId = '') {
-  const now = Date.now();
-  // Token Meter measures generation speed from output + reasoning tokens over
-  // the streaming span (firstToken -> streamed), not from input or cache reads.
-  const steps = [];
-  let newest = null;
-  for (const r of Object.values(state?.recent ?? {})) {
-    if (sessionId && r.s !== sessionId) continue;
-    if (rowTokens(r) > 0 && (!newest || r.t > newest.t)) newest = r;
-    const ms = (r.st || 0) - (r.ft || 0);
-    const output = (r.o || 0) + (r.r || 0);
-    if (ms <= 150 || output <= 0) continue;
-    steps.push({ at: r.st || r.t, tps: Math.round((output / ms) * 1000 * 10) / 10, tokens: output });
-  }
-  steps.sort((a, b) => a.at - b.at);
-  const recent = steps.filter((s) => s.at >= now - 60_000);
-  let tps = recent.length ? recent[recent.length - 1].tps : 0;
-  let peak = steps.reduce((m, s) => Math.max(m, s.tps), 0);
-  let lastAt = steps.length ? steps[steps.length - 1].at : 0;
-  let source = 'database';
-  if (stream.state === 'open' && stream.chars.length) {
-    const mine = stream.chars.filter((c) => !sessionId || c.s === sessionId);
-    const recentChars = mine.filter((c) => c.t >= now - 5000).reduce((a, c) => a + c.n, 0);
-    tps = Math.round((recentChars / 3.5 / 5) * 10) / 10;
-    peak = Math.max(peak, Math.round((mine.reduce((a, c) => a + c.n, 0) / 3.5 / 12) * 10) / 10);
-    lastAt = mine.length ? mine[mine.length - 1].t : 0;
-    source = 'stream';
-  }
-  const today = summarize('today', ALL);
-  return {
-    tps, peak, source,
-    lastTurn: newest ? rowTokens(newest) : 0,
-    model: newest?.model || '',
-    title: newest ? (state.sessions[newest.s]?.title || '') : '',
-    idle: !lastAt || now - lastAt > 120_000,
-    builtAt: state?.builtAt ?? 0,
-    summary: { stats: today.stats, totals: today.totals, deltas: today.deltas },
-  };
-}
-
 function context(sessionId = '') {
   let rows = Object.values(state?.recent ?? {}).filter((r) => !sessionId || r.s === sessionId)
     .sort((a, b) => b.t - a.t).slice(0, 200);
@@ -668,11 +570,6 @@ http.createServer((req, res) => {
     refresh();
     const p = Object.fromEntries(url.searchParams);
     send(res, 200, logs(p));
-    return;
-  }
-  if (url.pathname === '/live' && req.method === 'GET') {
-    if (url.searchParams.get('fresh') === '1') refresh(true); else refresh();
-    send(res, 200, live(url.searchParams.get('session') ?? ''));
     return;
   }
   if (url.pathname === '/context' && req.method === 'GET') {

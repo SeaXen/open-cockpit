@@ -2574,7 +2574,6 @@ ${GUEST_UI_LOOK_CSS}`;
   var data = null;
   var summary = null;
   var todayData = null;
-  var liveData = null;
   var ctxData = null;
   var logData = [];
   var currentSession = "";
@@ -2649,7 +2648,6 @@ ${GUEST_UI_LOOK_CSS}`;
         data = await json(`/data?range=${range}&project=${encodeURIComponent(project)}`);
         todayData = await json(`/data?range=today&project=${encodeURIComponent(project)}`);
         summary = await json("/summary");
-        liveData = await json(`/live${currentSession ? `?session=${encodeURIComponent(currentSession)}` : ""}`);
         ctxData = await json("/context");
         if (currentSession) sessionInfo = await json(`/session?session=${encodeURIComponent(currentSession)}`);
       }
@@ -2876,20 +2874,9 @@ ${GUEST_UI_LOOK_CSS}`;
   var CACHE = { key: "cr", label: "Cache", num: true, get: (r) => fmt(r.cr || 0), raw: (r) => r.cr || 0 };
   var dateCols = [NAME, { key: "requests", label: "Req", num: true }, { key: "tools", label: "Tools", num: true }, ERR, TOK];
   function todayCard() {
-    return card("todayOverview", "Today at a glance", liveData?.idle ? "idle \xB7 live" : "active \xB7 live", () => {
-      const l = liveData;
+    return card("todayOverview", "Today at a glance", "real data", () => {
       const s = summary?.stats ?? todayData?.stats ?? {};
-      const meter = el2("div", "live");
-      const main = el2("div", "live-main");
-      main.append(el2("div", "live-v", l ? String(l.tps) : "0"), el2("div", "live-u", "tokens / sec"));
-      meter.append(main);
-      const liveFacts = factsGrid([
-        ["Peak / min", fmt(l?.peak ?? 0)],
-        ["Last turn", fmt(l?.lastTurn ?? 0)],
-        ["Model", (l?.model || "\u2014").split("/").pop() || "\u2014"],
-        ["Updated", clock(l?.builtAt ?? 0)]
-      ]);
-      const facts = factsGrid([
+      return factsGrid([
         ["Sessions", String(s.sessions ?? 0)],
         ["Requests", String(s.requests ?? 0)],
         ["Tools", String(s.tools ?? 0)],
@@ -2902,27 +2889,7 @@ ${GUEST_UI_LOOK_CSS}`;
         ["Errors", String(s.errors ?? 0)],
         ["Est. cost", `$${estCost(s).toFixed(4)}`]
       ]);
-      return [meter, liveFacts, facts];
     });
-  }
-  var lastLiveAt = 0;
-  async function refreshLive() {
-    if (surface !== "panel" || tab !== "overview" || loading || !data || document.visibilityState !== "visible") return;
-    const every = liveData?.source === "stream" ? 2e3 : 5e3;
-    if (Date.now() - lastLiveAt < every) return;
-    lastLiveAt = Date.now();
-    try {
-      const q = currentSession ? `&session=${encodeURIComponent(currentSession)}` : "";
-      const l = await json(`/live?fresh=1${q}`);
-      liveData = l;
-      summary = l.summary ?? summary;
-      if (currentSession) sessionInfo = await json(`/session?session=${encodeURIComponent(currentSession)}`);
-      for (const old of [...root.querySelectorAll("[data-card]")]) old.remove();
-      const foot = root.querySelector(".foot");
-      for (const c of overviewCards()) root.insertBefore(c, foot);
-      if (foot) foot.textContent = `Live \xB7 ${clock(l.builtAt)} \xB7 local OpenCode data`;
-    } catch {
-    }
   }
   function contextCard(source) {
     const c = source ?? ctxData;
@@ -3204,7 +3171,7 @@ ${GUEST_UI_LOOK_CSS}`;
         ["Tools", String(s.tools ?? 0)],
         ["Skills", String(s.skills ?? 0)],
         ["Est. cost", `$${estCost(s).toFixed(4)}`],
-        ["Model", (liveData?.model || "\u2014").split("/").pop() || "\u2014"]
+        ["Context req", String(sessionInfo?.context?.requests ?? 0)]
       ]);
     }));
     out.push(tokenBreakdown(s, focusSession ? "Session token breakdown" : "Session token breakdown", "tokens"));
@@ -3431,8 +3398,5 @@ ${GUEST_UI_LOOK_CSS}`;
       await load();
       if (surface === "panel" && tab === "logs") await loadLogs();
     })();
-    setInterval(() => {
-      void refreshLive();
-    }, 2e3);
   });
 })();
