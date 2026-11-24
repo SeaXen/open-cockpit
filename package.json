@@ -1,0 +1,34 @@
+{
+  "name": "open-cockpit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Usage cockpit: today's tokens, requests, tools and skills in Work Status, with full breakdowns on the rail.",
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": { "openchamber": ">=2.7.3" },
+    "id": "open-cockpit",
+    "name": "Open Cockpit",
+    "icon": "dashboard",
+    "contributes": {
+      "service": { "entry": "service/main.js", "runtime": "host", "keepRunning": true, "provides": ["opencode"] },
+      "panel": {
+        "id": "open-cockpit",
+        "name": "Usage Cockpit",
+        "icon": "dashboard",
+        "entry": "panel/index.html"
+      },
+      "statusSection": {
+        "entry": "panel/index.html",
+        "title": "Usage today",
+        "height": 190
+      }
+    }
+  },
+  "devDependencies": { "@openchamber/sdk": "2.7.3", "esbuild": "0.25.0" },
+  "scripts": {
+    "build": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2022 --outfile=panel/main.js",
+    "check": "node scripts/check.mjs",
+    "test": "node --test service/*.test.mjs"
+  }
+}
