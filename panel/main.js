@@ -2894,10 +2894,13 @@ ${GUEST_UI_LOOK_CSS}`;
         ["Requests", String(s.requests ?? 0)],
         ["Tools", String(s.tools ?? 0)],
         ["Skills", String(s.skills ?? 0)],
+        ["MCP", String(s.mcp ?? 0)],
+        ["Projects", String(s.projects ?? 0)],
         ["Text", fmt(s.tokens ?? 0)],
         ["Cache", fmt(s.cache ?? 0)],
         ["Total", fmt(s.totalTokens ?? 0)],
-        ["Errors", String(s.errors ?? 0)]
+        ["Errors", String(s.errors ?? 0)],
+        ["Est. cost", `$${estCost(s).toFixed(4)}`]
       ]);
       return [meter, liveFacts, facts];
     });
@@ -3214,14 +3217,17 @@ ${GUEST_UI_LOOK_CSS}`;
     return out;
   }
   function overviewCards() {
-    if (currentSession) return sessionOverview();
     const out = [todayCard()];
     if (todayData) out.push(tokenBreakdown(todayData.stats, "Today's token breakdown"));
     out.push(historyCard(data.totals));
     out.push(card("stats", "Current period", data.label, () => statTiles(data.stats, data.deltas)));
     out.push(budgetCard(summary?.stats ?? {}));
-    out.push(contextCard());
-    out.push(...contextExtras());
+    if (currentSession) {
+      out.push(...sessionOverview());
+    } else {
+      out.push(contextCard());
+      out.push(...contextExtras());
+    }
     return out;
   }
   function renderStatus() {
