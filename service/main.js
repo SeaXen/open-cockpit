@@ -578,12 +578,12 @@ http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/session' && req.method === 'GET') {
-    refresh();
+    if (url.searchParams.get('fresh') === '1') refresh(true); else refresh();
     send(res, 200, sessionData(url.searchParams.get('session') ?? ''));
     return;
   }
   if (url.pathname === '/data' && req.method === 'GET') {
-    refresh();
+    if (url.searchParams.get('fresh') === '1') refresh(true); else refresh();
     const r = summarize(url.searchParams.get('range') ?? 'all', url.searchParams.get('project') ?? ALL);
     send(res, r.error ? 503 : 200, r);
     return;

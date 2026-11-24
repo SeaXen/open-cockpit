@@ -1,6 +1,6 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "description": "Usage cockpit: today's tokens, requests, tools and skills in Work Status, with full breakdowns on the rail.",
@@ -9,13 +9,13 @@
     "engines": { "openchamber": ">=2.7.3" },
     "id": "open-cockpit",
     "name": "Open Cockpit",
-    "icon": "dashboard",
+    "icon": "assets/icon.svg",
     "contributes": {
       "service": { "entry": "service/main.js", "runtime": "host" },
       "panel": {
         "id": "open-cockpit",
         "name": "Usage Cockpit",
-        "icon": "dashboard",
+        "icon": "assets/icon.svg",
         "entry": "panel/index.html"
       },
       "statusSection": {

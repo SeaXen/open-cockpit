@@ -2643,7 +2643,7 @@ ${GUEST_UI_LOOK_CSS}`;
     try {
       if (force) await host.serviceRequest({ method: "POST", path: "/refresh", body: "{}" });
       if (surface === "status") {
-        summary = await json("/summary");
+        summary = await json(force ? "/summary?fresh=1" : "/summary");
       } else {
         data = await json(`/data?range=${range}&project=${encodeURIComponent(project)}`);
         todayData = await json(`/data?range=today&project=${encodeURIComponent(project)}`);
@@ -3398,5 +3398,9 @@ ${GUEST_UI_LOOK_CSS}`;
       await load();
       if (surface === "panel" && tab === "logs") await loadLogs();
     })();
+    setInterval(() => {
+      if (loading || document.visibilityState !== "visible") return;
+      void load(true);
+    }, 5e3);
   });
 })();

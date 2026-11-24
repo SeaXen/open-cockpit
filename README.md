@@ -32,3 +32,6 @@ does not build anything, so commit the generated `panel/main.js` with the source
 Usage numbers come from `~/.local/share/opencode/opencode.db` (or the platform
 equivalent). Context estimates also read `AGENTS.md` / `CLAUDE.md` in the open
 project and the user's OpenCode config folder. Nothing is uploaded.
+
+The panel rechecks the database every 5 seconds while it is visible; the
+Refresh button forces an immediate check.
