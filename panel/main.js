@@ -2747,9 +2747,17 @@ ${GUEST_UI_LOOK_CSS}`;
     const wrap = el2("div", "stats");
     const cards = surface === "status" ? [
       ["Tokens", fmt(s.tokens), deltas.tokens],
+      ["Total", fmt(s.totalTokens), null],
+      ["Cache", fmt(s.cache), null],
       ["Requests", String(s.requests), deltas.requests],
       ["Tool calls", String(s.tools), deltas.tools],
-      ["Skills", String(s.skills), deltas.skills]
+      ["Skills", String(s.skills), deltas.skills],
+      ["MCP", String(s.mcp), null],
+      ["Errors", String(s.errors ?? 0), null],
+      ["Sessions", String(s.sessions), null],
+      ["Projects", String(s.projects), null],
+      ["Est. cost", `$${estCost(s).toFixed(4)}`, null],
+      ["Context", `${s.cacheHitRate ?? 0}% hit`, null]
     ] : [
       ["Text", fmt(s.tokens), deltas.tokens],
       ["In", fmt(s.input), null],
@@ -3268,6 +3276,7 @@ ${GUEST_UI_LOOK_CSS}`;
     root.append(historyCard(summary.totals, true));
     const d = summary.deltas.tokens;
     if (d !== null && d !== void 0) root.append(el2("div", "foot", `Tokens ${d >= 0 ? "up" : "down"} ${Math.abs(d)}% versus yesterday`));
+    root.append(el2("div", "foot", `Updated ${clock(summary.builtAt)} \xB7 checks every 5s`));
     if (settings.budget && (summary.stats.totalTokens ?? 0) > settings.budget) {
       root.append(el2("div", "hint up", `Daily budget exceeded: ${fmt(summary.stats.totalTokens - settings.budget)} tokens over.`));
     }

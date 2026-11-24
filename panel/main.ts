@@ -207,8 +207,12 @@ function tile(label: string, value: string, delta?: number | null): HTMLElement 
 function statTiles(s: Stats, deltas: Record<string, number | null> = {}): HTMLElement {
   const wrap = el('div', 'stats');
   const cards = surface === 'status'
-    ? [['Tokens', fmt(s.tokens), deltas.tokens], ['Requests', String(s.requests), deltas.requests],
-       ['Tool calls', String(s.tools), deltas.tools], ['Skills', String(s.skills), deltas.skills]]
+    ? [['Tokens', fmt(s.tokens), deltas.tokens], ['Total', fmt(s.totalTokens), null],
+       ['Cache', fmt(s.cache), null], ['Requests', String(s.requests), deltas.requests],
+       ['Tool calls', String(s.tools), deltas.tools], ['Skills', String(s.skills), deltas.skills],
+       ['MCP', String(s.mcp), null], ['Errors', String(s.errors ?? 0), null],
+       ['Sessions', String(s.sessions), null], ['Projects', String(s.projects), null],
+       ['Est. cost', `$${estCost(s).toFixed(4)}`, null], ['Context', `${s.cacheHitRate ?? 0}% hit`, null]]
     : [['Text', fmt(s.tokens), deltas.tokens], ['In', fmt(s.input), null], ['Out', fmt(s.output), null], ['Cache', fmt(s.cache), null],
        ['Req', String(s.requests), deltas.requests], ['Tools', String(s.tools), deltas.tools],
        ['Skills', String(s.skills), deltas.skills], ['MCP', String(s.mcp), null],
@@ -632,6 +636,7 @@ function renderStatus(): void {
   root.append(historyCard(summary!.totals, true));
   const d = summary!.deltas.tokens;
   if (d !== null && d !== undefined) root.append(el('div', 'foot', `Tokens ${d >= 0 ? 'up' : 'down'} ${Math.abs(d)}% versus yesterday`));
+  root.append(el('div', 'foot', `Updated ${clock(summary!.builtAt)} · checks every 5s`));
   if (settings.budget && (summary!.stats.totalTokens ?? 0) > settings.budget) {
     root.append(el('div', 'hint up', `Daily budget exceeded: ${fmt(summary!.stats.totalTokens - settings.budget)} tokens over.`));
   }
