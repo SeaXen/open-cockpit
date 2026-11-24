@@ -27,6 +27,10 @@ const TABS = [
   { id: 'context', label: 'Context' }, { id: 'tool', label: 'Tool' }, { id: 'skill', label: 'Skill' },
   { id: 'mcp', label: 'MCP' }, { id: 'logs', label: 'Logs' }, { id: 'settings', label: 'Settings' },
 ];
+const TAB_ICONS: Record<string, string> = {
+  overview: '▤', token: '◈', date: '▦', model: '⬡', session: '◉', project: '▣',
+  context: '◫', tool: '⚒', skill: '✦', mcp: '⬢', logs: '☰', settings: '⚙',
+};
 const RANGES = [
   { id: 'today', label: 'Today' }, { id: 'week', label: '7 days' }, { id: 'month', label: '30 days' },
   { id: 'year', label: 'Year' }, { id: 'all', label: 'All time' },
@@ -41,7 +45,7 @@ let logSession = '';
 let logSearch = '';
 let collapsed = new Set<string>();
 const settings = { bars: 14, heatWeeks: 26, showTrends: true, clock12: false, contextLimit: 1048576,
-  budget: 0, priceIn: 0, priceOut: 0, priceCache: 0 };
+  budget: 0, priceIn: 0, priceOut: 0, priceCache: 0, sectionPicker: 'dropdown' as 'dropdown' | 'icons', cardOrder: [] as string[] };
 let data: Data | null = null;
 let summary: Summary | null = null;
 let todayData: Data | null = null;
@@ -75,6 +79,11 @@ const factsGrid = (pairs: [string, string][]): HTMLElement => {
   }
   return wrap;
 };
+const tileGrid = (pairs: [string, string][]): HTMLElement => {
+  const wrap = el('div', 'stats');
+  for (const [label, value] of pairs) wrap.append(tile(label, value));
+  return wrap;
+};
 
 async function saveView(): Promise<void> {
   try { await host.storage.set('view', { tab, range, project, filter, logKind, logSession, collapsed: [...collapsed], settings }); }
@@ -102,6 +111,8 @@ async function loadView(): Promise<void> {
       if (typeof s.priceIn === 'number') settings.priceIn = s.priceIn;
       if (typeof s.priceOut === 'number') settings.priceOut = s.priceOut;
       if (typeof s.priceCache === 'number') settings.priceCache = s.priceCache;
+      if (s.sectionPicker === 'icons' || s.sectionPicker === 'dropdown') settings.sectionPicker = s.sectionPicker;
+      if (Array.isArray(s.cardOrder)) settings.cardOrder = s.cardOrder.filter((x: unknown) => typeof x === 'string');
     }
   } catch { /* no saved view */ }
 }
@@ -149,8 +160,26 @@ function card(id: string, title: string, right: string, build: () => HTMLElement
   const h = el('button', 'card-h');
   h.append(el('span', '', title));
   const r = el('span', 'right');
-  r.append(el('span', '', right), el('span', 'chev', collapsed.has(id) ? '▸' : '▾'));
+  const grip = el('span', 'grip', '⋮⋮');
+  grip.draggable = true;
+  grip.title = 'Drag to reorder';
+  grip.onmousedown = (e) => e.stopPropagation();
+  grip.ondragstart = (e) => { e.dataTransfer?.setData('text/plain', id); };
+  r.append(el('span', '', right), el('span', 'chev', collapsed.has(id) ? '▸' : '▾'), grip);
   h.append(r);
+  c.ondragover = (e) => e.preventDefault();
+  c.ondrop = (e) => {
+    e.preventDefault();
+    const from = e.dataTransfer?.getData('text/plain');
+    if (!from || from === id) return;
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-card]')];
+    const a = cards.find((x) => x.dataset.card === from);
+    if (!a) return;
+    const box = c.getBoundingClientRect();
+    c.parentNode?.insertBefore(a, e.clientY > box.top + box.height / 2 ? c.nextSibling : c);
+    settings.cardOrder = [...root.querySelectorAll<HTMLElement>('[data-card]')].map((x) => x.dataset.card ?? '');
+    void saveView();
+  };
   const body = el('div', 'card-body');
   const made = build();
   const nodes = Array.isArray(made) ? made : [made];
@@ -334,7 +363,7 @@ const dateCols: Col[] = [NAME, { key: 'requests', label: 'Req', num: true }, { k
 function todayCard(): HTMLElement {
   return card('todayOverview', 'Today at a glance', 'real data', () => {
     const s = summary?.stats ?? todayData?.stats ?? {};
-    return factsGrid([
+    return tileGrid([
       ['Sessions', String(s.sessions ?? 0)], ['Requests', String(s.requests ?? 0)],
       ['Tools', String(s.tools ?? 0)], ['Skills', String(s.skills ?? 0)],
       ['MCP', String(s.mcp ?? 0)], ['Projects', String(s.projects ?? 0)],
@@ -388,9 +417,9 @@ function contextExtras(source?: Ctx): HTMLElement[] {
 function historyCard(totals: Record<string, number>, compact = false): HTMLElement {
   return card(compact ? 'statusHistory' : 'history', 'Total tokens', compact ? '' : 'all periods', () => {
     const periods: [string, string][] = compact
-      ? [['today', 'Today'], ['week', '7 days'], ['all', 'All time']]
-      : [['today', 'Today'], ['week', '7 days'], ['month', '30 days'], ['year', 'Year'], ['all', 'All time']];
-    return factsGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)] as [string, string]));
+      ? [['week', '7 days'], ['month', '30 days'], ['all', 'All time']]
+      : [['week', '7 days'], ['month', '30 days'], ['year', 'Year'], ['all', 'All time']];
+    return tileGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)] as [string, string]));
   });
 }
 
@@ -475,6 +504,9 @@ function settingsCard(): HTMLElement {
     add('Clock', '12 hour or 24 hour time', select(settings.clock12 ? '12' : '24', [['24', '24 hour'], ['12', '12 hour']], (id) => {
       settings.clock12 = id === '12'; void saveView(); render();
     }));
+    add('Section control', 'Narrow layout: names or icons', select(settings.sectionPicker, [['dropdown', 'Names'], ['icons', 'Icons']], (id) => {
+      settings.sectionPicker = id as 'dropdown' | 'icons'; void saveView(); render();
+    }));
     add('Context limit', 'Model context window size', select(settings.contextLimit, [['262144', '256k'], ['524288', '512k'], ['1048576', '1M'], ['2097152', '2M']], (id) => {
       settings.contextLimit = Number(id); void saveView(); render();
     }));
@@ -510,6 +542,7 @@ function settingsCard(): HTMLElement {
         tab = 'overview'; range = 'all'; project = ALL; filter = ''; logKind = 'all'; logSession = ''; collapsed = new Set();
         settings.bars = 14; settings.heatWeeks = 26; settings.showTrends = true; settings.clock12 = false; settings.contextLimit = 1048576;
         settings.budget = 0; settings.priceIn = 0; settings.priceOut = 0; settings.priceCache = 0;
+        settings.sectionPicker = 'dropdown'; settings.cardOrder = [];
         void host.storage.delete('view').catch(() => undefined);
         void saveView(); void load();
       },
@@ -549,7 +582,7 @@ function sessionOverview(): HTMLElement[] {
     out.push(bar);
   }
   out.push(card('sessionStats', focusSession ? 'Session totals' : 'This session', sessionInfo?.title ?? 'none', () => {
-    return factsGrid([
+    return tileGrid([
       ['Tokens', fmt(s.totalTokens ?? 0)], ['Text', fmt(s.tokens ?? 0)], ['Cache', fmt(s.cache ?? 0)],
       ['Requests', String(s.requests ?? 0)], ['Tools', String(s.tools ?? 0)], ['Skills', String(s.skills ?? 0)],
       ['Est. cost', `$${estCost(s).toFixed(4)}`], ['Context req', String(sessionInfo?.context?.requests ?? 0)],
@@ -563,6 +596,16 @@ function sessionOverview(): HTMLElement[] {
   }
   out.push(budgetCard(summary?.stats ?? {}));
   return out;
+}
+
+function applyCardOrder(): void {
+  if (!settings.cardOrder.length) return;
+  const cards = [...root.querySelectorAll<HTMLElement>('[data-card]')];
+  const foot = root.querySelector('.foot');
+  const ordered = [...settings.cardOrder]
+    .map((id) => cards.find((c) => c.dataset.card === id))
+    .filter((c): c is HTMLElement => Boolean(c));
+  for (const c of ordered) root.insertBefore(c, foot);
 }
 
 function overviewCards(): HTMLElement[] {
@@ -635,6 +678,7 @@ function selectTab(id: string): void {
 }
 
 function renderPanel(): void {
+  document.body.classList.toggle('icon-picker', settings.sectionPicker === 'icons');
   root.replaceChildren();
   const top = el('div', 'rowbar');
   const toprow = el('div', 'toprow');
@@ -647,7 +691,15 @@ function renderPanel(): void {
     onChange: (id: string) => selectTab(id),
     placeholder: 'Section',
   });
-  toprow.append(tabsWrap, tabSelect);
+  const iconPick = el('div', 'icon-picker');
+  for (const t of TABS) {
+    const b = el('button', `icon-btn${t.id === tab ? ' active' : ''}`, TAB_ICONS[t.id]);
+    b.title = t.label;
+    b.setAttribute('aria-label', t.label);
+    b.onclick = () => selectTab(t.id);
+    iconPick.append(b);
+  }
+  toprow.append(tabsWrap, tabSelect, iconPick);
   top.append(toprow);
   const toolrow = el('div', 'toolrow');
   const ranges = el('div', 'tabs');
@@ -669,7 +721,8 @@ function renderPanel(): void {
   });
   toolrow.append(pick);
   const refresh = el('div', 'refresh');
-  mountButton(refresh, { label: 'Refresh', onClick: () => { void load(true); if (tab === 'logs') void loadLogs(); } });
+  mountButton(refresh, { label: '⟳', onClick: () => { void load(true); if (tab === 'logs') void loadLogs(); } });
+  refresh.querySelector('button')?.setAttribute('title', 'Refresh');
   toolrow.append(refresh);
   const search = el('div', 'search');
   const input = el('input');
@@ -727,7 +780,8 @@ function renderPanel(): void {
   } else if (tab === 'settings') {
     root.append(settingsCard());
   }
-  root.append(el('div', 'foot', `Updated ${clock(data.builtAt)} · local OpenCode data · no polling`));
+  applyCardOrder();
+  root.append(el('div', 'foot', `Updated ${clock(data.builtAt)} · checks every 5s · local OpenCode data`));
 }
 
 function render(): void {

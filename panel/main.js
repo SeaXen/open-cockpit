@@ -2544,6 +2544,20 @@ ${GUEST_UI_LOOK_CSS}`;
     { id: "logs", label: "Logs" },
     { id: "settings", label: "Settings" }
   ];
+  var TAB_ICONS = {
+    overview: "\u25A4",
+    token: "\u25C8",
+    date: "\u25A6",
+    model: "\u2B21",
+    session: "\u25C9",
+    project: "\u25A3",
+    context: "\u25EB",
+    tool: "\u2692",
+    skill: "\u2726",
+    mcp: "\u2B22",
+    logs: "\u2630",
+    settings: "\u2699"
+  };
   var RANGES = [
     { id: "today", label: "Today" },
     { id: "week", label: "7 days" },
@@ -2569,7 +2583,9 @@ ${GUEST_UI_LOOK_CSS}`;
     budget: 0,
     priceIn: 0,
     priceOut: 0,
-    priceCache: 0
+    priceCache: 0,
+    sectionPicker: "dropdown",
+    cardOrder: []
   };
   var data = null;
   var summary = null;
@@ -2601,6 +2617,11 @@ ${GUEST_UI_LOOK_CSS}`;
     }
     return wrap;
   };
+  var tileGrid = (pairs) => {
+    const wrap = el2("div", "stats");
+    for (const [label, value] of pairs) wrap.append(tile(label, value));
+    return wrap;
+  };
   async function saveView() {
     try {
       await host.storage.set("view", { tab, range, project, filter, logKind, logSession, collapsed: [...collapsed], settings });
@@ -2629,6 +2650,8 @@ ${GUEST_UI_LOOK_CSS}`;
         if (typeof s.priceIn === "number") settings.priceIn = s.priceIn;
         if (typeof s.priceOut === "number") settings.priceOut = s.priceOut;
         if (typeof s.priceCache === "number") settings.priceCache = s.priceCache;
+        if (s.sectionPicker === "icons" || s.sectionPicker === "dropdown") settings.sectionPicker = s.sectionPicker;
+        if (Array.isArray(s.cardOrder)) settings.cardOrder = s.cardOrder.filter((x) => typeof x === "string");
       }
     } catch {
     }
@@ -2675,8 +2698,28 @@ ${GUEST_UI_LOOK_CSS}`;
     const h = el2("button", "card-h");
     h.append(el2("span", "", title));
     const r = el2("span", "right");
-    r.append(el2("span", "", right), el2("span", "chev", collapsed.has(id) ? "\u25B8" : "\u25BE"));
+    const grip = el2("span", "grip", "\u22EE\u22EE");
+    grip.draggable = true;
+    grip.title = "Drag to reorder";
+    grip.onmousedown = (e) => e.stopPropagation();
+    grip.ondragstart = (e) => {
+      e.dataTransfer?.setData("text/plain", id);
+    };
+    r.append(el2("span", "", right), el2("span", "chev", collapsed.has(id) ? "\u25B8" : "\u25BE"), grip);
     h.append(r);
+    c.ondragover = (e) => e.preventDefault();
+    c.ondrop = (e) => {
+      e.preventDefault();
+      const from = e.dataTransfer?.getData("text/plain");
+      if (!from || from === id) return;
+      const cards = [...root.querySelectorAll("[data-card]")];
+      const a = cards.find((x) => x.dataset.card === from);
+      if (!a) return;
+      const box = c.getBoundingClientRect();
+      c.parentNode?.insertBefore(a, e.clientY > box.top + box.height / 2 ? c.nextSibling : c);
+      settings.cardOrder = [...root.querySelectorAll("[data-card]")].map((x) => x.dataset.card ?? "");
+      void saveView();
+    };
     const body = el2("div", "card-body");
     const made = build();
     const nodes = Array.isArray(made) ? made : [made];
@@ -2876,7 +2919,7 @@ ${GUEST_UI_LOOK_CSS}`;
   function todayCard() {
     return card("todayOverview", "Today at a glance", "real data", () => {
       const s = summary?.stats ?? todayData?.stats ?? {};
-      return factsGrid([
+      return tileGrid([
         ["Sessions", String(s.sessions ?? 0)],
         ["Requests", String(s.requests ?? 0)],
         ["Tools", String(s.tools ?? 0)],
@@ -2937,8 +2980,8 @@ ${GUEST_UI_LOOK_CSS}`;
   }
   function historyCard(totals, compact = false) {
     return card(compact ? "statusHistory" : "history", "Total tokens", compact ? "" : "all periods", () => {
-      const periods = compact ? [["today", "Today"], ["week", "7 days"], ["all", "All time"]] : [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["year", "Year"], ["all", "All time"]];
-      return factsGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)]));
+      const periods = compact ? [["week", "7 days"], ["month", "30 days"], ["all", "All time"]] : [["week", "7 days"], ["month", "30 days"], ["year", "Year"], ["all", "All time"]];
+      return tileGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)]));
     });
   }
   function tokenBreakdown(s, title) {
@@ -3041,6 +3084,11 @@ ${GUEST_UI_LOOK_CSS}`;
         void saveView();
         render();
       }));
+      add("Section control", "Narrow layout: names or icons", select(settings.sectionPicker, [["dropdown", "Names"], ["icons", "Icons"]], (id) => {
+        settings.sectionPicker = id;
+        void saveView();
+        render();
+      }));
       add("Context limit", "Model context window size", select(settings.contextLimit, [["262144", "256k"], ["524288", "512k"], ["1048576", "1M"], ["2097152", "2M"]], (id) => {
         settings.contextLimit = Number(id);
         void saveView();
@@ -3118,6 +3166,8 @@ ${GUEST_UI_LOOK_CSS}`;
           settings.priceIn = 0;
           settings.priceOut = 0;
           settings.priceCache = 0;
+          settings.sectionPicker = "dropdown";
+          settings.cardOrder = [];
           void host.storage.delete("view").catch(() => void 0);
           void saveView();
           void load();
@@ -3163,7 +3213,7 @@ ${GUEST_UI_LOOK_CSS}`;
       out.push(bar);
     }
     out.push(card("sessionStats", focusSession ? "Session totals" : "This session", sessionInfo?.title ?? "none", () => {
-      return factsGrid([
+      return tileGrid([
         ["Tokens", fmt(s.totalTokens ?? 0)],
         ["Text", fmt(s.tokens ?? 0)],
         ["Cache", fmt(s.cache ?? 0)],
@@ -3182,6 +3232,13 @@ ${GUEST_UI_LOOK_CSS}`;
     }
     out.push(budgetCard(summary?.stats ?? {}));
     return out;
+  }
+  function applyCardOrder() {
+    if (!settings.cardOrder.length) return;
+    const cards = [...root.querySelectorAll("[data-card]")];
+    const foot = root.querySelector(".foot");
+    const ordered = [...settings.cardOrder].map((id) => cards.find((c) => c.dataset.card === id)).filter((c) => Boolean(c));
+    for (const c of ordered) root.insertBefore(c, foot);
   }
   function overviewCards() {
     const out = [todayCard()];
@@ -3255,6 +3312,7 @@ ${GUEST_UI_LOOK_CSS}`;
     else render();
   }
   function renderPanel() {
+    document.body.classList.toggle("icon-picker", settings.sectionPicker === "icons");
     root.replaceChildren();
     const top = el2("div", "rowbar");
     const toprow = el2("div", "toprow");
@@ -3267,7 +3325,15 @@ ${GUEST_UI_LOOK_CSS}`;
       onChange: (id) => selectTab(id),
       placeholder: "Section"
     });
-    toprow.append(tabsWrap, tabSelect);
+    const iconPick = el2("div", "icon-picker");
+    for (const t of TABS) {
+      const b = el2("button", `icon-btn${t.id === tab ? " active" : ""}`, TAB_ICONS[t.id]);
+      b.title = t.label;
+      b.setAttribute("aria-label", t.label);
+      b.onclick = () => selectTab(t.id);
+      iconPick.append(b);
+    }
+    toprow.append(tabsWrap, tabSelect, iconPick);
     top.append(toprow);
     const toolrow = el2("div", "toolrow");
     const ranges = el2("div", "tabs");
@@ -3294,10 +3360,11 @@ ${GUEST_UI_LOOK_CSS}`;
     });
     toolrow.append(pick);
     const refresh = el2("div", "refresh");
-    mountButton(refresh, { label: "Refresh", onClick: () => {
+    mountButton(refresh, { label: "\u27F3", onClick: () => {
       void load(true);
       if (tab === "logs") void loadLogs();
     } });
+    refresh.querySelector("button")?.setAttribute("title", "Refresh");
     toolrow.append(refresh);
     const search = el2("div", "search");
     const input = el2("input");
@@ -3366,7 +3433,8 @@ ${GUEST_UI_LOOK_CSS}`;
     } else if (tab === "settings") {
       root.append(settingsCard());
     }
-    root.append(el2("div", "foot", `Updated ${clock(data.builtAt)} \xB7 local OpenCode data \xB7 no polling`));
+    applyCardOrder();
+    root.append(el2("div", "foot", `Updated ${clock(data.builtAt)} \xB7 checks every 5s \xB7 local OpenCode data`));
   }
   function render() {
     const active2 = document.activeElement;
