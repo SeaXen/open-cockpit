@@ -107,13 +107,17 @@
   .setting .control{flex:0 0 140px;min-width:0;}
   .setting .control .oc-sdk-trigger{height:26px;font-size:.7rem;}
   .setting .btn .oc-sdk-button{height:26px;}
-  body.status #root{padding:9px;gap:7px;}
-  body.status .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;}
-  body.status .tile{padding:7px 6px;}
-  body.status .tile .v{font-size:.92rem;}
-  body.status .history{grid-template-columns:repeat(3,minmax(0,1fr));}
-  body.status .card-h{padding:7px 9px;}
-  body.status .card-body{padding:0 9px 8px;}
+  body.status #root{padding:6px;gap:5px;}
+  body.status .card{background:transparent;border:0;}
+  body.status .card-h{padding:3px 1px;font-size:.6rem;}
+  body.status .card-h .right{display:none;}
+  body.status .card-body{padding:0;}
+  body.status .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}
+  body.status .tile{padding:5px 5px;border-radius:6px;}
+  body.status .tile .v{font-size:.82rem;}
+  body.status .tile .l{font-size:.55rem;margin-top:1px;}
+  body.status .tile .d{font-size:.5rem;overflow:hidden;text-overflow:ellipsis;}
+  body.status .foot{font-size:.58rem;text-align:left;padding:0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   @media (max-width:560px){
     .toprow .tabs-wrap{display:none;}
     .toprow .tab-select{display:block;}

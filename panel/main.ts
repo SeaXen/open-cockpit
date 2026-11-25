@@ -208,11 +208,11 @@ function statTiles(s: Stats, deltas: Record<string, number | null> = {}): HTMLEl
   const wrap = el('div', 'stats');
   const cards = surface === 'status'
     ? [['Tokens', fmt(s.tokens), deltas.tokens], ['Total', fmt(s.totalTokens), null],
-       ['Cache', fmt(s.cache), null], ['Requests', String(s.requests), deltas.requests],
-       ['Tool calls', String(s.tools), deltas.tools], ['Skills', String(s.skills), deltas.skills],
+       ['Cache', fmt(s.cache), null], ['Req', String(s.requests), deltas.requests],
+       ['Tools', String(s.tools), deltas.tools], ['Skills', String(s.skills), deltas.skills],
        ['MCP', String(s.mcp), null], ['Errors', String(s.errors ?? 0), null],
        ['Sessions', String(s.sessions), null], ['Projects', String(s.projects), null],
-       ['Est. cost', `$${estCost(s).toFixed(4)}`, null], ['Context', `${s.cacheHitRate ?? 0}% hit`, null]]
+       ['Est.', `$${estCost(s).toFixed(4)}`, null], ['Hit', `${s.cacheHitRate ?? 0}%`, null]]
     : [['Text', fmt(s.tokens), deltas.tokens], ['In', fmt(s.input), null], ['Out', fmt(s.output), null], ['Cache', fmt(s.cache), null],
        ['Req', String(s.requests), deltas.requests], ['Tools', String(s.tools), deltas.tools],
        ['Skills', String(s.skills), deltas.skills], ['MCP', String(s.mcp), null],
@@ -418,11 +418,9 @@ function contextExtras(source?: Ctx): HTMLElement[] {
   return [cacheCard, breakdown];
 }
 
-function historyCard(totals: Record<string, number>, compact = false): HTMLElement {
-  return card(compact ? 'statusHistory' : 'history', 'Total tokens', compact ? '' : 'all periods', () => {
-    const periods: [string, string][] = compact
-      ? [['week', '7 days'], ['month', '30 days'], ['all', 'All time']]
-      : [['week', '7 days'], ['month', '30 days'], ['year', 'Year'], ['all', 'All time']];
+function historyCard(totals: Record<string, number>): HTMLElement {
+  return card('history', 'Total tokens', 'all periods', () => {
+    const periods: [string, string][] = [['week', '7 days'], ['month', '30 days'], ['year', 'Year'], ['all', 'All time']];
     return tileGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)] as [string, string]));
   });
 }
@@ -633,14 +631,13 @@ function renderStatus(): void {
   if (!summary) { root.append(el('div', 'empty', 'Reading usage…')); return; }
   if (summary.error) { mountEmpty(root, { title: 'No usage data', body: summary.error }); return; }
   root.append(card('statusStats', 'Today at a glance', '', () => statTiles(summary!.stats, summary!.deltas)));
-  root.append(historyCard(summary!.totals, true));
   const d = summary!.deltas.tokens;
-  if (d !== null && d !== undefined) root.append(el('div', 'foot', `Tokens ${d >= 0 ? 'up' : 'down'} ${Math.abs(d)}% versus yesterday`));
-  root.append(el('div', 'foot', `Updated ${clock(summary!.builtAt)} · checks every 5s`));
-  if (settings.budget && (summary!.stats.totalTokens ?? 0) > settings.budget) {
-    root.append(el('div', 'hint up', `Daily budget exceeded: ${fmt(summary!.stats.totalTokens - settings.budget)} tokens over.`));
-  }
-  requestAnimationFrame(() => { void host.setHeight(Math.min(320, Math.ceil(root.getBoundingClientRect().height) + 12)); });
+  const parts: string[] = [];
+  if (d !== null && d !== undefined) parts.push(`Tokens ${d >= 0 ? '+' : ''}${d}% vs yesterday`);
+  parts.push(clock(summary!.builtAt));
+  if (settings.budget && (summary!.stats.totalTokens ?? 0) > settings.budget) parts.push('over budget');
+  root.append(el('div', 'foot', parts.join(' · ')));
+  requestAnimationFrame(() => { void host.setHeight(Math.min(240, Math.ceil(root.getBoundingClientRect().height) + 10)); });
 }
 
 function tokenTab(): void {

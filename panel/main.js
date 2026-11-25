@@ -2749,15 +2749,15 @@ ${GUEST_UI_LOOK_CSS}`;
       ["Tokens", fmt(s.tokens), deltas.tokens],
       ["Total", fmt(s.totalTokens), null],
       ["Cache", fmt(s.cache), null],
-      ["Requests", String(s.requests), deltas.requests],
-      ["Tool calls", String(s.tools), deltas.tools],
+      ["Req", String(s.requests), deltas.requests],
+      ["Tools", String(s.tools), deltas.tools],
       ["Skills", String(s.skills), deltas.skills],
       ["MCP", String(s.mcp), null],
       ["Errors", String(s.errors ?? 0), null],
       ["Sessions", String(s.sessions), null],
       ["Projects", String(s.projects), null],
-      ["Est. cost", `$${estCost(s).toFixed(4)}`, null],
-      ["Context", `${s.cacheHitRate ?? 0}% hit`, null]
+      ["Est.", `$${estCost(s).toFixed(4)}`, null],
+      ["Hit", `${s.cacheHitRate ?? 0}%`, null]
     ] : [
       ["Text", fmt(s.tokens), deltas.tokens],
       ["In", fmt(s.input), null],
@@ -2986,9 +2986,9 @@ ${GUEST_UI_LOOK_CSS}`;
     const breakdown = breakdownCard("Context breakdown", (c?.breakdown ?? []).map((b) => [b.label, b.tokens]), "tokens");
     return [cacheCard, breakdown];
   }
-  function historyCard(totals, compact = false) {
-    return card(compact ? "statusHistory" : "history", "Total tokens", compact ? "" : "all periods", () => {
-      const periods = compact ? [["week", "7 days"], ["month", "30 days"], ["all", "All time"]] : [["week", "7 days"], ["month", "30 days"], ["year", "Year"], ["all", "All time"]];
+  function historyCard(totals) {
+    return card("history", "Total tokens", "all periods", () => {
+      const periods = [["week", "7 days"], ["month", "30 days"], ["year", "Year"], ["all", "All time"]];
       return tileGrid(periods.map(([id, label]) => [label, fmt(totals[id] ?? 0)]));
     });
   }
@@ -3273,15 +3273,14 @@ ${GUEST_UI_LOOK_CSS}`;
       return;
     }
     root.append(card("statusStats", "Today at a glance", "", () => statTiles(summary.stats, summary.deltas)));
-    root.append(historyCard(summary.totals, true));
     const d = summary.deltas.tokens;
-    if (d !== null && d !== void 0) root.append(el2("div", "foot", `Tokens ${d >= 0 ? "up" : "down"} ${Math.abs(d)}% versus yesterday`));
-    root.append(el2("div", "foot", `Updated ${clock(summary.builtAt)} \xB7 checks every 5s`));
-    if (settings.budget && (summary.stats.totalTokens ?? 0) > settings.budget) {
-      root.append(el2("div", "hint up", `Daily budget exceeded: ${fmt(summary.stats.totalTokens - settings.budget)} tokens over.`));
-    }
+    const parts = [];
+    if (d !== null && d !== void 0) parts.push(`Tokens ${d >= 0 ? "+" : ""}${d}% vs yesterday`);
+    parts.push(clock(summary.builtAt));
+    if (settings.budget && (summary.stats.totalTokens ?? 0) > settings.budget) parts.push("over budget");
+    root.append(el2("div", "foot", parts.join(" \xB7 ")));
     requestAnimationFrame(() => {
-      void host.setHeight(Math.min(320, Math.ceil(root.getBoundingClientRect().height) + 12));
+      void host.setHeight(Math.min(240, Math.ceil(root.getBoundingClientRect().height) + 10));
     });
   }
   function tokenTab() {
