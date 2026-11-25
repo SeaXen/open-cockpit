@@ -40,6 +40,22 @@ Enable the extension and approve `service`. The OpenCode plugin is contributed b
 opencode plugin add github:SeaXen/open-cockpit
 ```
 
+If `plugin add github:` fails on Windows with `git dep preparation failed`, use one of these instead:
+
+1. **Recommended:** install the OpenChamber extension above. It contributes the OpenCode plugin too — approve `opencodePlugin` when asked. No separate plugin install is needed.
+2. **Local path:** clone the repo, then add the directory directly:
+
+```powershell
+git clone https://github.com/SeaXen/open-cockpit.git
+opencode plugin add C:\Users\Sagar-EB\open-cockpit
+```
+
+Or put the path in `~/.config/opencode/opencode.json`:
+
+```json
+{ "plugins": ["C:/Users/Sagar-EB/open-cockpit"] }
+```
+
 Then restart OpenCode. The single tool is available as `cockpit` (or `tools.cockpit` in Code Mode):
 
 ```ts

@@ -1,6 +1,6 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "private": true,
   "type": "module",
   "description": "Real local token usage in OpenChamber's rail and Work Status, plus one OpenCode cockpit tool.",
