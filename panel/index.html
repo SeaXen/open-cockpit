@@ -36,10 +36,10 @@
   .toolrow .refresh{flex:0 0 auto;}
   .toolrow .refresh .oc-sdk-button{height:24px;padding:0 8px;font-size:.68rem;}
   .toolrow input{width:100%;height:24px;background:var(--oc-elevated);color:var(--oc-fg);border:1px solid var(--oc-border);border-radius:var(--oc-radius);padding:0 7px;font-size:.7rem;}
-  .card{background:transparent;border:0;border-radius:var(--oc-radius);overflow:hidden;}
-  .card-h{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--oc-fg);font:inherit;font-weight:650;font-size:.68rem;letter-spacing:.03em;text-transform:uppercase;padding:5px 8px;margin-bottom:5px;cursor:pointer;text-align:left;background:color-mix(in srgb, var(--oc-primary) 8%, transparent);border:0;border-left:2px solid var(--oc-primary);border-radius:4px;}
-  .card-h:hover{background:color-mix(in srgb, var(--oc-primary) 15%, transparent);}
-  .card-h .right{display:flex;align-items:center;gap:8px;color:var(--oc-muted);font-weight:500;letter-spacing:0;text-transform:none;font-size:.64rem;}
+  .card{background:color-mix(in srgb, var(--oc-fg) 4%, transparent);border:1px solid color-mix(in srgb, var(--oc-fg) 6%, transparent);border-radius:var(--oc-radius);overflow:hidden;}
+  .card-h{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;background:none;border:0;color:var(--oc-muted);font:inherit;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;padding:9px 11px;cursor:pointer;text-align:left;}
+  .card-h:hover{color:var(--oc-fg);}
+  .card-h .right{display:flex;align-items:center;gap:8px;letter-spacing:0;text-transform:none;font-size:.66rem;}
   .card-h .chev{font-size:.7rem;color:var(--oc-muted);}
   .card-h .grip{cursor:grab;color:var(--oc-muted);font-size:.8rem;letter-spacing:-2px;padding:0 2px;}
 
@@ -107,7 +107,8 @@
   .setting .control .oc-sdk-trigger{height:26px;font-size:.7rem;}
   .setting .btn .oc-sdk-button{height:26px;}
   body.status #root{padding:6px;gap:5px;}
-  body.status .card-h{padding:3px 6px;margin-bottom:3px;font-size:.6rem;}
+  body.status .card{background:transparent;border:0;}
+  body.status .card-h{padding:3px 6px;font-size:.6rem;}
   body.status .card-h .right{display:none;}
   body.status .card-body{padding:0;}
   body.status .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}
