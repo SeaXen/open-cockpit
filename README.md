@@ -36,11 +36,20 @@ Enable the extension and approve `service`. The OpenCode plugin is contributed b
 
 ### OpenCode plugin alone
 
+Once the package is published to npm (maintainer step below):
+
 ```sh
 opencode plugin add open-cockpit
 ```
 
-This installs from npm, so no git dependency preparation is needed.
+Until then, use the local-path install described below. The `open-cockpit` name is available on npm; publishing avoids the Windows git dependency error.
+
+Maintainer publish step (no npm token needed):
+
+1. On npmjs.com, open the `open-cockpit` package settings and add a **Trusted Publisher**: repository `SeaXen/open-cockpit`, workflow `publish.yml`, branch `master`.
+2. Bump `version` in `package.json` and push to `master`.
+
+`.github/workflows/publish.yml` publishes through npm OIDC when the version is new. No token or secret is stored in the repository.
 
 If `plugin add github:` fails on Windows with `git dep preparation failed`, use one of these instead:
 

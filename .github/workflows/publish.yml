@@ -1,0 +1,42 @@
+name: publish
+
+# Publishes to npm with OIDC trusted publishing. No npm token or secret is
+# needed. Set up Trusted Publisher once on npmjs.com for this package:
+# repository SeaXen/open-cockpit, workflow publish.yml, branch master.
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish when the version is new
+        run: |
+          set -eu
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          published=$(npm view "$name" version 2>/dev/null || echo none)
+          if [ "$published" = "$version" ]; then
+            echo "$name@$version is already published"
+            exit 0
+          fi
+          if [ "$published" != none ] &&
+             [ "$(printf '%s\n%s\n' "$published" "$version" | sort -V | tail -1)" != "$version" ]; then
+            echo "$version is behind registry's $published, skipped"
+            exit 0
+          fi
+          echo "publishing $name@$version"
+          npm publish --access public
