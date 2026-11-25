@@ -697,11 +697,22 @@ function renderPanel(): void {
   const tabSelect = el('div', 'tab-select');
   mountSelect(tabSelect, {
     value: tab,
-    options: TABS.map((t) => ({ id: t.id, label: settings.sectionPicker === 'icons' ? TAB_ICONS[t.id] : t.label })),
+    options: TABS.map((t) => ({ id: t.id, label: t.label })),
     onChange: (id: string) => selectTab(id),
     placeholder: 'Section',
   });
-  toprow.append(tabsWrap, tabSelect);
+  const iconPick = el('div', 'icon-picker');
+  for (const t of TABS) {
+    const b = el('button', `icon-btn${t.id === tab ? ' active' : ''}`, TAB_ICONS[t.id]);
+    b.title = t.label;
+    b.setAttribute('aria-label', t.label);
+    b.onclick = () => selectTab(t.id);
+    iconPick.append(b);
+  }
+  const icons = settings.sectionPicker === 'icons';
+  iconPick.hidden = !icons;
+  if (icons) { tabsWrap.hidden = true; tabSelect.hidden = true; }
+  toprow.append(tabsWrap, tabSelect, iconPick);
   top.append(toprow);
   const toolrow = el('div', 'toolrow');
   const ranges = el('div', 'tabs');
