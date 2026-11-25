@@ -1,6 +1,6 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "private": true,
   "type": "module",
   "description": "Real local token usage in OpenChamber's rail and Work Status, plus one OpenCode cockpit tool.",
@@ -32,7 +32,7 @@
   },
   "devDependencies": { "@openchamber/sdk": "2.7.3", "esbuild": "0.25.0" },
   "scripts": {
-    "build": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2022 --outfile=panel/main.js",
+    "bundle": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2022 --outfile=panel/main.js",
     "check": "node scripts/check.mjs",
     "test": "node --test service/*.test.mjs"
   }

@@ -42,7 +42,13 @@ Once the package is published to npm (maintainer step below):
 opencode plugin add open-cockpit
 ```
 
-Until then, use the local-path install described below. The `open-cockpit` name is available on npm; publishing avoids the Windows git dependency error.
+Until then, the Git install works too — the package deliberately has no `build`/`prepare` script:
+
+```sh
+opencode plugin add github:SeaXen/open-cockpit
+```
+
+The `open-cockpit` npm name is still available; publishing would allow the one-line `open-cockpit` install.
 
 Maintainer publish step (no npm token needed):
 
@@ -92,12 +98,12 @@ Usage numbers come from `~/.local/share/opencode/opencode.db` (or the platform e
 
 ```sh
 npm install
-npm run build
+npm run bundle
 npm test
 npm run check
 ```
 
-The built `panel/main.js` is committed; installing never builds.
+The script is named `bundle`, not `build`: OpenCode's Windows git installer fails when a plugin package defines a `build`/`prepare`/`install` script. The built `panel/main.js` is committed; installing never builds.
 
 ## License
 
