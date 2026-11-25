@@ -487,6 +487,8 @@ function logCard(): HTMLElement {
   });
 }
 
+const deferRender = (): void => { setTimeout(() => render(), 0); };
+
 function settingsCard(): HTMLElement {
   return card('settings', 'Settings', 'saved on this device', () => {
     const wrap = el('div', 'settings');
@@ -504,13 +506,13 @@ function settingsCard(): HTMLElement {
     };
     add('Default period', 'Which range opens by default', select(range, RANGES.map((r) => [r.id, r.label]), (id) => { range = id; void saveView(); void load(); }));
     add('Clock', '12 hour or 24 hour time', select(settings.clock12 ? '12' : '24', [['24', '24 hour'], ['12', '12 hour']], (id) => {
-      settings.clock12 = id === '12'; void saveView(); render();
+      settings.clock12 = id === '12'; void saveView(); deferRender();
     }));
     add('Section control', 'Narrow layout: names or icons', select(settings.sectionPicker, [['dropdown', 'Names'], ['icons', 'Icons']], (id) => {
-      settings.sectionPicker = id as 'dropdown' | 'icons'; void saveView(); render();
+      settings.sectionPicker = id as 'dropdown' | 'icons'; void saveView(); deferRender();
     }));
     add('Context limit', 'Model context window size', select(settings.contextLimit, [['262144', '256k'], ['524288', '512k'], ['1048576', '1M'], ['2097152', '2M']], (id) => {
-      settings.contextLimit = Number(id); void saveView(); render();
+      settings.contextLimit = Number(id); void saveView(); deferRender();
     }));
     const num = (value: number, placeholder: string, key: string, onChange: (n: number) => void): HTMLElement => {
       const box = el('div', 'control');
@@ -524,18 +526,18 @@ function settingsCard(): HTMLElement {
       if (input) input.dataset.focusKey = key;
       return box;
     };
-    add('Daily budget', 'Tokens per day, 0 = off', num(settings.budget, 'e.g. 1000000', 'budget', (n) => { settings.budget = n; void saveView(); render(); }));
-    add('Price in / 1M', 'Optional estimate for input tokens', num(settings.priceIn, '0', 'price-in', (n) => { settings.priceIn = n; void saveView(); render(); }));
-    add('Price out / 1M', 'Optional estimate for output tokens', num(settings.priceOut, '0', 'price-out', (n) => { settings.priceOut = n; void saveView(); render(); }));
-    add('Price cache / 1M', 'Optional estimate for cache reads', num(settings.priceCache, '0', 'price-cache', (n) => { settings.priceCache = n; void saveView(); render(); }));
+    add('Daily budget', 'Tokens per day, 0 = off', num(settings.budget, 'e.g. 1000000', 'budget', (n) => { settings.budget = n; void saveView(); deferRender(); }));
+    add('Price in / 1M', 'Optional estimate for input tokens', num(settings.priceIn, '0', 'price-in', (n) => { settings.priceIn = n; void saveView(); deferRender(); }));
+    add('Price out / 1M', 'Optional estimate for output tokens', num(settings.priceOut, '0', 'price-out', (n) => { settings.priceOut = n; void saveView(); deferRender(); }));
+    add('Price cache / 1M', 'Optional estimate for cache reads', num(settings.priceCache, '0', 'price-cache', (n) => { settings.priceCache = n; void saveView(); deferRender(); }));
     add('Daily bars', 'Days in the bar chart', select(settings.bars, [['7', '7 days'], ['14', '14 days'], ['30', '30 days']], (id) => {
-      settings.bars = Number(id); void saveView(); render();
+      settings.bars = Number(id); void saveView(); deferRender();
     }));
     add('Heat map', 'Weeks of activity', select(settings.heatWeeks, [['13', '13 weeks'], ['26', '26 weeks'], ['52', '52 weeks']], (id) => {
-      settings.heatWeeks = Number(id); void saveView(); render();
+      settings.heatWeeks = Number(id); void saveView(); deferRender();
     }));
     const trendBtn = el('div', 'btn');
-    mountButton(trendBtn, { label: `Trends: ${settings.showTrends ? 'on' : 'off'}`, onClick: () => { settings.showTrends = !settings.showTrends; void saveView(); render(); } });
+    mountButton(trendBtn, { label: `Trends: ${settings.showTrends ? 'on' : 'off'}`, onClick: () => { settings.showTrends = !settings.showTrends; void saveView(); deferRender(); } });
     add('Trend deltas', 'Show vs-prior change on tiles', trendBtn);
     const resetBtn = el('div', 'btn');
     mountButton(resetBtn, {
@@ -798,8 +800,14 @@ function render(): void {
   const focusKey = active?.dataset?.focusKey ?? '';
   const caret = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
   const y = window.scrollY;
-  if (surface === 'status') renderStatus();
-  else renderPanel();
+  try {
+    if (surface === 'status') renderStatus();
+    else renderPanel();
+  } catch (e) {
+    root.replaceChildren();
+    root.append(el('div', 'empty', `Could not draw the panel: ${e instanceof Error ? e.message : String(e)}`));
+    return;
+  }
   requestAnimationFrame(() => {
     if (focusKey) {
       const el = document.querySelector<HTMLInputElement>(`[data-focus-key="${focusKey}"]`);

@@ -1,6 +1,6 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "type": "module",
   "description": "Usage cockpit: today's tokens, requests, tools and skills in Work Status, with full breakdowns on the rail.",
