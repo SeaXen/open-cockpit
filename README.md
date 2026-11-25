@@ -35,3 +35,10 @@ project and the user's OpenCode config folder. Nothing is uploaded.
 
 The panel rechecks the database every 5 seconds while it is visible; the
 Refresh button forces an immediate check.
+
+## OpenCode tools
+
+The same package also contributes an OpenCode plugin (`plugin/index.js`). It
+registers `cockpit_usage`, `cockpit_context` and `cockpit_sessions`, which read
+the same local database and return plain text. The OpenChamber rail UI and the
+OpenCode tools can be used together; neither replaces the other.

@@ -1,6 +1,6 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "type": "module",
   "description": "Usage cockpit: today's tokens, requests, tools and skills in Work Status, with full breakdowns on the rail.",
@@ -12,6 +12,7 @@
     "icon": "assets/icon.svg",
     "contributes": {
       "service": { "entry": "service/main.js", "runtime": "host" },
+      "opencodePlugin": "plugin",
       "panel": {
         "id": "open-cockpit",
         "name": "Usage Cockpit",
