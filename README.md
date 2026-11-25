@@ -37,8 +37,10 @@ Enable the extension and approve `service`. The OpenCode plugin is contributed b
 ### OpenCode plugin alone
 
 ```sh
-opencode plugin add github:SeaXen/open-cockpit
+opencode plugin add open-cockpit
 ```
+
+This installs from npm, so no git dependency preparation is needed.
 
 If `plugin add github:` fails on Windows with `git dep preparation failed`, use one of these instead:
 

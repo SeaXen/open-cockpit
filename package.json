@@ -1,12 +1,13 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "private": true,
   "type": "module",
   "description": "Real local token usage in OpenChamber's rail and Work Status, plus one OpenCode cockpit tool.",
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/SeaXen/open-cockpit.git" },
   "exports": { ".": "./plugin/index.js" },
+  "files": ["package.json", "README.md", "LICENSE", "panel", "service", "plugin", "scripts"],
   "openchamber": {
     "apiVersion": 1,
     "engines": { "openchamber": ">=2.7.3" },
