@@ -3330,7 +3330,6 @@ ${GUEST_UI_LOOK_CSS}`;
     else render();
   }
   function renderPanel() {
-    document.body.classList.toggle("icon-picker", settings.sectionPicker === "icons");
     root.replaceChildren();
     const top = el2("div", "rowbar");
     const toprow = el2("div", "toprow");
@@ -3339,19 +3338,11 @@ ${GUEST_UI_LOOK_CSS}`;
     const tabSelect = el2("div", "tab-select");
     mountSelect(tabSelect, {
       value: tab,
-      options: TABS.map((t) => ({ id: t.id, label: t.label })),
+      options: TABS.map((t) => ({ id: t.id, label: settings.sectionPicker === "icons" ? TAB_ICONS[t.id] : t.label })),
       onChange: (id) => selectTab(id),
       placeholder: "Section"
     });
-    const iconPick = el2("div", "icon-picker");
-    for (const t of TABS) {
-      const b = el2("button", `icon-btn${t.id === tab ? " active" : ""}`, TAB_ICONS[t.id]);
-      b.title = t.label;
-      b.setAttribute("aria-label", t.label);
-      b.onclick = () => selectTab(t.id);
-      iconPick.append(b);
-    }
-    toprow.append(tabsWrap, tabSelect, iconPick);
+    toprow.append(tabsWrap, tabSelect);
     top.append(toprow);
     const toolrow = el2("div", "toolrow");
     const ranges = el2("div", "tabs");
@@ -3494,5 +3485,13 @@ ${GUEST_UI_LOOK_CSS}`;
       if (loading || document.visibilityState !== "visible") return;
       void load(true);
     }, 5e3);
+    setTimeout(() => {
+      if (root.childElementCount === 0) {
+        collapsed = /* @__PURE__ */ new Set();
+        settings.sectionPicker = "dropdown";
+        void saveView();
+        void load(true);
+      }
+    }, 1500);
   });
 })();

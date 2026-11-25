@@ -689,7 +689,6 @@ function selectTab(id: string): void {
 }
 
 function renderPanel(): void {
-  document.body.classList.toggle('icon-picker', settings.sectionPicker === 'icons');
   root.replaceChildren();
   const top = el('div', 'rowbar');
   const toprow = el('div', 'toprow');
@@ -698,19 +697,11 @@ function renderPanel(): void {
   const tabSelect = el('div', 'tab-select');
   mountSelect(tabSelect, {
     value: tab,
-    options: TABS.map((t) => ({ id: t.id, label: t.label })),
+    options: TABS.map((t) => ({ id: t.id, label: settings.sectionPicker === 'icons' ? TAB_ICONS[t.id] : t.label })),
     onChange: (id: string) => selectTab(id),
     placeholder: 'Section',
   });
-  const iconPick = el('div', 'icon-picker');
-  for (const t of TABS) {
-    const b = el('button', `icon-btn${t.id === tab ? ' active' : ''}`, TAB_ICONS[t.id]);
-    b.title = t.label;
-    b.setAttribute('aria-label', t.label);
-    b.onclick = () => selectTab(t.id);
-    iconPick.append(b);
-  }
-  toprow.append(tabsWrap, tabSelect, iconPick);
+  toprow.append(tabsWrap, tabSelect);
   top.append(toprow);
   const toolrow = el('div', 'toolrow');
   const ranges = el('div', 'tabs');
@@ -832,4 +823,12 @@ host.onReady((context) => {
     if (loading || document.visibilityState !== 'visible') return;
     void load(true);
   }, 5000);
+  setTimeout(() => {
+    if (root.childElementCount === 0) {
+      collapsed = new Set();
+      settings.sectionPicker = 'dropdown';
+      void saveView();
+      void load(true);
+    }
+  }, 1500);
 });
