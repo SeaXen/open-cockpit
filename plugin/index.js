@@ -73,9 +73,28 @@ function sessions(db, limit) {
   return ['Open Cockpit — top sessions', ...rows.map((r, i) => `${i + 1}. ${r.title || r.id} — ${r.tokens} tokens, ${r.requests} requests`)].join('\n');
 }
 
+const CockpitRpc = {
+  id: 'open-cockpit',
+  methods: {
+    snapshot: {
+      input: { type: 'object', additionalProperties: false },
+      output: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false },
+    },
+  },
+};
+
 export default {
   id: 'open-cockpit',
   async setup(ctx) {
+    await ctx.rpc.register(CockpitRpc, {
+      snapshot: async () => {
+        const db = await openDb();
+        if (!db) return { text: 'OpenCode database not found.' };
+        try {
+          return { text: [usage(db, 7), '', context(db, ''), '', sessions(db, 5)].join('\n') };
+        } finally { db.close(); }
+      },
+    });
     await ctx.tool.transform((editor) => {
       editor.add({
         name: 'cockpit',

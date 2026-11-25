@@ -1,13 +1,16 @@
 {
   "name": "open-cockpit",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "private": true,
   "type": "module",
   "description": "Real local token usage in OpenChamber's rail and Work Status, plus one OpenCode cockpit tool.",
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/SeaXen/open-cockpit.git" },
-  "exports": { ".": "./plugin/index.js" },
-  "files": ["package.json", "README.md", "LICENSE", "panel", "service", "plugin", "scripts"],
+  "exports": {
+    ".": "./plugin/index.js",
+    "./gui-experimental": "./dist/gui-experimental.cjs"
+  },
+  "files": ["package.json", "README.md", "LICENSE", "panel", "service", "plugin", "gui", "dist", "scripts", "vite.gui.config.mjs"],
   "openchamber": {
     "apiVersion": 1,
     "engines": { "openchamber": ">=2.7.3" },
@@ -30,9 +33,17 @@
       }
     }
   },
-  "devDependencies": { "@openchamber/sdk": "2.7.3", "esbuild": "0.25.0" },
+  "devDependencies": {
+    "@openchamber/sdk": "2.7.3",
+    "@opencode/plugin": "latest",
+    "esbuild": "0.25.0",
+    "solid-js": "^1.9.0",
+    "vite": "^7.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  },
   "scripts": {
     "bundle": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2022 --outfile=panel/main.js",
+    "bundle-gui": "vite build --config vite.gui.config.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --test service/*.test.mjs"
   }

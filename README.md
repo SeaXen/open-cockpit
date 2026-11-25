@@ -3,7 +3,7 @@
 A single package that gives you real usage data in two places:
 
 - **OpenChamber extension** — a rail panel with 12 sections and a compact Work Status section.
-- **OpenCode plugin** — one `cockpit` tool for asking OpenCode about usage, context and sessions.
+- **OpenCode plugin** — one `cockpit` tool plus a Desktop side panel showing the same real usage data.
 
 Both read the same local OpenCode database. No account, no cloud service, no data leaves the machine.
 
@@ -73,7 +73,7 @@ Or put the path in `~/.config/opencode/opencode.json`:
 { "plugins": ["C:/Users/Sagar-EB/open-cockpit"] }
 ```
 
-Then restart OpenCode. The single tool is available as `cockpit` (or `tools.cockpit` in Code Mode):
+Then restart OpenCode Desktop. Open the **Open Cockpit** command from the command palette, or open the panel from the session's side-region menu. It shows token usage, context and top sessions; the data comes from the server part through RPC. The tool is also available as `cockpit` (or `tools.cockpit` in Code Mode):
 
 ```ts
 await tools.cockpit({ action: "usage", days: 7 });
