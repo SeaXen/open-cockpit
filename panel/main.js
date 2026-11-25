@@ -3273,6 +3273,13 @@ ${GUEST_UI_LOOK_CSS}`;
       return;
     }
     root.append(card("statusStats", "Today at a glance", "", () => statTiles(summary.stats, summary.deltas)));
+    const totalsRow = el2("div", "status-totals");
+    for (const [id, label] of [["week", "7 days"], ["month", "30 days"], ["year", "Year"], ["all", "All time"]]) {
+      const item = el2("div", "st");
+      item.append(el2("span", "l", label), el2("span", "v", fmt(summary.totals[id] ?? 0)));
+      totalsRow.append(item);
+    }
+    root.append(totalsRow);
     const d = summary.deltas.tokens;
     const parts = [];
     if (d !== null && d !== void 0) parts.push(`Tokens ${d >= 0 ? "+" : ""}${d}% vs yesterday`);

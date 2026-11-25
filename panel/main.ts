@@ -631,6 +631,13 @@ function renderStatus(): void {
   if (!summary) { root.append(el('div', 'empty', 'Reading usage…')); return; }
   if (summary.error) { mountEmpty(root, { title: 'No usage data', body: summary.error }); return; }
   root.append(card('statusStats', 'Today at a glance', '', () => statTiles(summary!.stats, summary!.deltas)));
+  const totalsRow = el('div', 'status-totals');
+  for (const [id, label] of [['week', '7 days'], ['month', '30 days'], ['year', 'Year'], ['all', 'All time']] as [string, string][]) {
+    const item = el('div', 'st');
+    item.append(el('span', 'l', label), el('span', 'v', fmt(summary!.totals[id] ?? 0)));
+    totalsRow.append(item);
+  }
+  root.append(totalsRow);
   const d = summary!.deltas.tokens;
   const parts: string[] = [];
   if (d !== null && d !== undefined) parts.push(`Tokens ${d >= 0 ? '+' : ''}${d}% vs yesterday`);
