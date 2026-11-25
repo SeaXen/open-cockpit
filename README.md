@@ -1,44 +1,77 @@
 # Open Cockpit
 
-An OpenChamber extension. It reads the local OpenCode database and shows token,
-tool, skill, MCP, session and context usage in a rail panel and Work Status.
-No account and no network calls; all data stays on this machine.
+A single package that gives you real usage data in two places:
+
+- **OpenChamber extension** — a rail panel with 12 sections and a compact Work Status section.
+- **OpenCode plugin** — one `cockpit` tool for asking OpenCode about usage, context and sessions.
+
+Both read the same local OpenCode database. No account, no cloud service, no data leaves the machine.
+
+## Features
+
+- Today at a glance: tokens, total tokens, cache, requests, tools, skills, MCP, errors, sessions, projects, cost and cache-hit rate.
+- Period totals for 7 days, 30 days, year and all time.
+- Dedicated tabs: Overview, Token, Date, Model, Session, Project, Context, Tool, Skill, MCP, Logs and Settings.
+- Daily bars, GitHub-style activity heat maps, sortable tables and a recent-activity log.
+- Context window gauge, six-category context breakdown and rolling cache-hit rate.
+- Daily token budget, optional price estimates, 12/24-hour clock, saved view settings and drag-to-reorder cards.
+- Panel and Work Status recheck data every 5 seconds while visible.
+- One OpenCode tool with `action: "usage" | "context" | "sessions"`.
+
+## Install
+
+### OpenChamber extension
+
+Click once:
+
+[Install Open Cockpit](openchamber://extensions/install?url=https%3A%2F%2Fgithub.com%2FSeaXen%2Fopen-cockpit)
+
+Or in OpenChamber, go to **Settings → Extensions → Add** and paste:
+
+```
+https://github.com/SeaXen/open-cockpit
+```
+
+Enable the extension and approve `service`. The OpenCode plugin is contributed by the same package; approve `opencodePlugin` when asked. The panel appears in the rail and the "Usage today" section appears in Work Status.
+
+### OpenCode plugin alone
+
+```sh
+opencode plugin add github:SeaXen/open-cockpit
+```
+
+Then restart OpenCode. The single tool is available as `cockpit` (or `tools.cockpit` in Code Mode):
+
+```ts
+await tools.cockpit({ action: "usage", days: 7 });
+await tools.cockpit({ action: "context" });
+await tools.cockpit({ action: "sessions", limit: 10 });
+```
 
 ## Files
 
-- `package.json` — manifest and scripts.
-- `service/main.js` — the host service. Reads SQLite, keeps a small JSON cache
-  in `~/.config/openchamber/guest-data/open-cockpit/cache.json`, and serves
-  `/data`, `/summary`, `/context`, `/session`, `/logs`, `/refresh`.
-- `panel/main.ts` — the page source. `panel/main.js` is the bundled page that
-  actually loads. Both the rail panel and the Work Status section use it.
-- `scripts/check.mjs` — runs the SDK manifest checker.
+- `package.json` — manifest, scripts and package exports.
+- `service/main.js` — host service: reads SQLite, keeps a small incremental cache, serves the panel.
+- `panel/main.ts` — page source; `panel/main.js` is the bundled page that loads.
+- `plugin/index.js` — OpenCode server plugin with the `cockpit` tool.
+- `scripts/check.mjs` — manifest checker.
 - `service/merge.test.mjs` — integration test for the incremental cache.
-
-## Build and check
-
-```sh
-npm install
-npm run build     # bundles panel/main.ts -> panel/main.js
-npm test          # creates a temporary database and checks merge logic
-npm run check     # validates the manifest
-```
-
-`npm run build` needs `esbuild` from `devDependencies`. Installing the extension
-does not build anything, so commit the generated `panel/main.js` with the source.
 
 ## Data and privacy
 
-Usage numbers come from `~/.local/share/opencode/opencode.db` (or the platform
-equivalent). Context estimates also read `AGENTS.md` / `CLAUDE.md` in the open
-project and the user's OpenCode config folder. Nothing is uploaded.
+Usage numbers come from `~/.local/share/opencode/opencode.db` (or the platform equivalent). Context estimates also read `AGENTS.md` / `CLAUDE.md` in the open project and the user's OpenCode config folder. Nothing is uploaded. The service listens only on loopback.
 
-The panel rechecks the database every 5 seconds while it is visible; the
-Refresh button forces an immediate check.
+## Development
 
-## OpenCode tools
+```sh
+npm install
+npm run build
+npm test
+npm run check
+```
 
-The same package also contributes an OpenCode plugin (`plugin/index.js`). It
-registers `cockpit_usage`, `cockpit_context` and `cockpit_sessions`, which read
-the same local database and return plain text. The OpenChamber rail UI and the
-OpenCode tools can be used together; neither replaces the other.
+The built `panel/main.js` is committed; installing never builds.
+
+## License
+
+MIT.

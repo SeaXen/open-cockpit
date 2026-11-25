@@ -77,35 +77,28 @@ export default {
   id: 'open-cockpit',
   async setup(ctx) {
     await ctx.tool.transform((editor) => {
-      editor.namespace({ name: 'cockpit', description: 'Open Cockpit usage tools' });
       editor.add({
-        name: 'usage',
-        description: 'Read real local token and request usage for today, 7 days, 30 days or all time.',
-        input: { type: 'object', properties: { days: { type: 'integer', enum: [1, 7, 30, 3650] } }, additionalProperties: false },
-        execute: async ({ days = 7 }) => {
-          const db = await openDb();
-          if (!db) return { content: 'OpenCode database not found.' };
-          try { return { content: usage(db, days) }; } finally { db.close(); }
+        name: 'cockpit',
+        description: 'Open Cockpit: read real local token usage, context window and top sessions. Use action usage, context or sessions.',
+        input: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['usage', 'context', 'sessions'] },
+            days: { type: 'integer', enum: [1, 7, 30, 3650] },
+            limit: { type: 'integer' },
+            session: { type: 'string' },
+          },
+          required: ['action'],
+          additionalProperties: false,
         },
-      });
-      editor.add({
-        name: 'context',
-        description: 'Show context window tokens and cache hit rate for a session, or the latest message.',
-        input: { type: 'object', properties: { session: { type: 'string' } }, additionalProperties: false },
-        execute: async ({ session = '' }) => {
+        execute: async ({ action = 'usage', days = 7, limit = 10, session = '' }) => {
           const db = await openDb();
           if (!db) return { content: 'OpenCode database not found.' };
-          try { return { content: context(db, session) }; } finally { db.close(); }
-        },
-      });
-      editor.add({
-        name: 'sessions',
-        description: 'List the sessions that used the most tokens.',
-        input: { type: 'object', properties: { limit: { type: 'integer' } }, additionalProperties: false },
-        execute: async ({ limit = 10 }) => {
-          const db = await openDb();
-          if (!db) return { content: 'OpenCode database not found.' };
-          try { return { content: sessions(db, Math.min(25, Math.max(1, limit))) }; } finally { db.close(); }
+          try {
+            if (action === 'context') return { content: context(db, session) };
+            if (action === 'sessions') return { content: sessions(db, Math.min(25, Math.max(1, limit))) };
+            return { content: usage(db, days) };
+          } finally { db.close(); }
         },
       });
     });
